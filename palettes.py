@@ -79,3 +79,22 @@ PALETTE_C64 = [ COLOUR_C64_BLACK     ,
                 COLOUR_C64_LIGHTBLUE , 
                 COLOUR_C64_LIGHTGREY] 
     
+# credit https://lospec.com/palette-list/midnight-ablaze
+PALETTE_MIDNIGHT_ABLAZE = [ (255,130,116),
+                            (213,60,106) ,
+                            (124,24,60)  ,
+                            (70,14,43)   ,
+                            (49,5,30)    ,
+                            (31,5,16)    ,
+                            (19,2,8)]
+                          
+# credit https://lospec.com/palette-list/abyss-9
+PALETTE_ABYSS9 = [  (0, 0, 0)      ,
+                    (31, 18, 58)   ,
+                    (58, 30, 126)  ,
+                    (84, 41, 194)  ,
+                    (84, 99, 217)  ,
+                    (98, 170, 221) ,
+                    (127, 227, 220),
+                    (160, 245, 198),
+                    (221, 248, 208)]

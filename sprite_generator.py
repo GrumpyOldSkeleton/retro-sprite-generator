@@ -14,22 +14,31 @@ PALETTE = palettes.PALETTE_PICO8
 # for each sprite
 NUMBER_OF_COLOURS = 3
 
-# the visual scale of the each pixel on screen
-# 3 or 4 looks good
-PIXEL_SIZE = 4
-
 # the actual size of the sprite
 SPRITE_WIDTH = 10
 SPRITE_HEIGHT = 8
 
-# the sprite mask to use. 
-# the mask constrains the shape of the sprite
-# set to None if not using mask
-SPRITE_MASK = masks.MASK_6X10_NARROW_WAIST 
+# the visual scale of the each pixel on screen
+# 3 or 4 looks good for retro games
+PIXEL_SIZE = 4
 
 # the number of sprites on the spritesheet
 SPRITES_ACROSS = 8
-SPRITES_DOWN = 8
+SPRITES_DOWN = 4
+
+# the threshold the dice roll has to fall below
+# for the cell to be coloured in
+THRESHOLD_START_VALUE = 0.7
+
+# the sprite mask to use. 
+# the mask constrains the shape of the sprite
+# set to None if not using mask
+SPRITE_MASK = masks.MASK_10X6_FAT_WAIST
+
+# how aggressively the mask should be applied
+# 0 = None 0.5 = 50% 1.0 = Always
+THRESHOLD_MASK_HARDNESS = 0.8
+
 
 # -----------------------------------------------------------
 # end settings
@@ -37,11 +46,10 @@ SPRITES_DOWN = 8
 
 # the spacing between sprites in actual pixels
 SPRITE_SPACING = 10
-SPACING_X = (SPRITE_WIDTH + SPRITE_SPACING) * PIXEL_SIZE
-SPACING_Y = (SPRITE_HEIGHT + SPRITE_SPACING) * PIXEL_SIZE
-MARGIN_X  = (SPRITE_WIDTH * PIXEL_SIZE) // 2
-MARGIN_Y  = (SPRITE_HEIGHT * PIXEL_SIZE) // 2
-
+SPACING_X     = (SPRITE_WIDTH  + SPRITE_SPACING) * PIXEL_SIZE
+SPACING_Y     = (SPRITE_HEIGHT + SPRITE_SPACING) * PIXEL_SIZE
+MARGIN_X      = (SPRITE_WIDTH  * PIXEL_SIZE) // 2
+MARGIN_Y      = (SPRITE_HEIGHT * PIXEL_SIZE) // 2
 SCREEN_WIDTH  = SPACING_X * SPRITES_ACROSS
 SCREEN_HEIGHT = SPACING_Y * SPRITES_DOWN
 
@@ -51,7 +59,7 @@ clock = pygame.time.Clock()
 
 
 
-class Ship():
+class RetroSprite():
     
     def __init__(self, n, x, y):
 
@@ -97,7 +105,7 @@ class Ship():
     def getThreshold(self, x, y):
         
         # higher values of t returned mean more likely to colour cell
-        t = 0.7
+        t = THRESHOLD_START_VALUE
                 
         if x == 0:
             t -= 0.1 # edge cells are more likely to stay black
@@ -112,7 +120,7 @@ class Ship():
             
             try:
                 if SPRITE_MASK[y][x] == 0:
-                    t -= 0.5
+                    t -= (t * THRESHOLD_MASK_HARDNESS)
             except IndexError:
                 # ignore mask not fitting
                 pass
@@ -123,11 +131,11 @@ class Ship():
         
         for y, line in enumerate(self.image):
             for x in range(0, SPRITE_WIDTH // 2):
+        
+                t = self.getThreshold(x,y)
                 r = random.random()
-                
-                threshold = self.getThreshold(x,y)
                     
-                if r < threshold:
+                if r < t:
                     colour = self.palette[random.randint(0,len(self.palette)-1)]
                     line[x] = colour
                     line[-x-1] = colour
@@ -153,7 +161,7 @@ class SpriteSheet():
     
     def __init__(self):
         
-        self.ships = []
+        self.sprites = []
         self.selected = []
         self.selected_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.show_selected = False
@@ -163,18 +171,17 @@ class SpriteSheet():
         
         self.seed += n
         random.seed(self.seed)
+        self.render()
         
     def render(self):
         
-        self.stepSeed(1)
-        
-        self.ships = []
+        self.sprites = []
         n = 0
         for y in range(0, SPRITES_DOWN):
             for x in range(0, SPRITES_ACROSS):
-                ship = Ship(n, x * SPACING_X, y * SPACING_Y)
-                ship.generate()
-                self.ships.append(ship)
+                sprite = RetroSprite(n, x * SPACING_X, y * SPACING_Y)
+                sprite.generate()
+                self.sprites.append(sprite)
                 n += 1
 
     def drawSelected(self):
@@ -209,24 +216,24 @@ class SpriteSheet():
         if self.show_selected:
             self.drawSelected()
         else:
-            for ship in self.ships:
-                ship.draw()
+            for sprite in self.sprites:
+                sprite.draw()
 
     def getSpriteAt(self, mx, my):
         
-        for ship in self.ships:
-            if ship.rect.collidepoint((mx, my)):
-                ship.highlight = not ship.highlight
-                if ship.highlight:
-                    copyimage = ship.image[:]
+        for sprite in self.sprites:
+            if sprite.rect.collidepoint((mx, my)):
+                sprite.highlight = not sprite.highlight
+                if sprite.highlight:
+                    copyimage = sprite.image[:]
                     self.selected.append(copyimage)
                 else:
-                    self.selected.remove(ship.image)
+                    self.selected.remove(sprite.image)
                 
 
 
 spritesheet = SpriteSheet()
-spritesheet.render()
+spritesheet.stepSeed(1)
     
 running = True
 
@@ -240,12 +247,14 @@ while running:
         if e.type == pygame.KEYDOWN:
             if e.key == pygame.K_ESCAPE:
                 running = False
-            elif (e.key == pygame.K_SPACE):
-                spritesheet.render()
+            elif (e.key == pygame.K_LEFT):
+                spritesheet.stepSeed(-1)
+            elif (e.key == pygame.K_RIGHT):
+                spritesheet.stepSeed(1)
             elif (e.key == pygame.K_p):
                 spritesheet.show_selected = not spritesheet.show_selected
             elif (e.key == pygame.K_s):
-                #pygame.image.save(spritesheet.selected_surface, 'save.png')
+                pygame.image.save(spritesheet.selected_surface, 'save_selected.png')
                 pygame.image.save(screen, 'save_screen.png')
                 
             
@@ -257,6 +266,6 @@ while running:
     
     spritesheet.draw()
         
-    clock.tick(60)
+    clock.tick(25)
     pygame.display.flip()
 
